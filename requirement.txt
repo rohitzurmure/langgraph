@@ -1,5 +1,5 @@
 streamlit
-PyPDF2
+pypdf2
 python-dotenv
 langgraph
 langchain-groq
