@@ -2,7 +2,7 @@ from langchain_groq import ChatGroq
 from state import GraphState
 import streamlit as st
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+
 st.sidebar.header("🔐 API Configuration")
 api_key = st.sidebar.text_input("Enter your Groq API Key:", type="password", value=st.session_state.get("api_key", ""))
 
