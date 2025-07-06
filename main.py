@@ -1,16 +1,21 @@
 import streamlit as st
 from PyPDF2 import PdfReader
-
+from langchain_groq import ChatGroq
 from graph import create_test_case_graph
 from state import GraphState
+from nodes import get_api_key, clear_api_key, get_llm
 
+# Get API key
+api_key = get_api_key()
 
+if st.sidebar.button("🔒 Clear API Key / Logout", key="logout_button"):
+    clear_api_key()
 
-
-
-
-#
-# os.environ["groq_api_key"] = groq_api_key
+# Check if we have a valid LLM before proceeding
+llm = get_llm()
+if not llm:
+    st.warning("Please enter your correct API Key to proceed.")
+    st.stop()
 
 def extract_text_from_pdf(uploaded_file):
     if uploaded_file is not None:
@@ -32,10 +37,10 @@ if "generated_result" not in st.session_state:
 # --- Sidebar for PDF Uploads ---
 with st.sidebar:
     st.header("Upload Documents")
-    user_pdf = st.file_uploader("Upload User Stories PDF", type="pdf")
-    spec_pdf = st.file_uploader("Upload Specification PDF", type="pdf")
+    user_pdf = st.file_uploader("Upload User Stories PDF", type="pdf", key="user_pdf_uploader")
+    spec_pdf = st.file_uploader("Upload Specification PDF", type="pdf", key="spec_pdf_uploader")
    
-    if st.button("Generate Test Cases"):
+    if st.button("Generate Test Cases", key="generate_button"):
         if user_pdf and spec_pdf:
             with st.spinner("Reading PDFs and generating test cases... This may take a moment."):
                 user_text = extract_text_from_pdf(user_pdf)
@@ -43,7 +48,7 @@ with st.sidebar:
 
                 # Create and run LangGraph
                 graph = create_test_case_graph()
-                
+               
                 # Initialize state
                 initial_state = GraphState(
                     user_stories=user_text,
@@ -55,11 +60,10 @@ with st.sidebar:
                     user_request="",
                     step="generate"
                 )
-                
+               
                 # Run the graph
                 result = graph.invoke(initial_state)
-                
-                
+               
                 st.session_state.generated_result = result["final_tests"]
                 st.session_state.messages.append({"role": "assistant", "content": "I have generated the initial test cases based on your documents. You can see them below. Feel free to ask me to make any changes or additions."})
                 st.session_state.messages.append({"role": "assistant", "content": result["final_tests"]})
@@ -85,7 +89,7 @@ if prompt := st.chat_input("e.g., 'Add a negative test case for the login functi
         with st.spinner("Refining the test cases based on your request..."):
             # Create refinement graph
             graph = create_test_case_graph()
-            
+           
             # Initialize state for refinement
             refinement_state = GraphState(
                 user_stories="",
@@ -97,10 +101,10 @@ if prompt := st.chat_input("e.g., 'Add a negative test case for the login functi
                 user_request=prompt,
                 step="refine"
             )
-            
+           
             # Run refinement
             refined_result = graph.invoke(refinement_state)
-            
+           
             # Update the stored result and conversation history
             st.session_state.generated_result = refined_result["final_tests"]
             st.session_state.messages.append({"role": "assistant", "content": refined_result["final_tests"]})
